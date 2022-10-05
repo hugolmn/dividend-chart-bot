@@ -29,10 +29,9 @@ def process_dividend_bot_request(api, tweet):
 def reply_to_tweets(api):
     latest_fav = api.get_favorites()[0].id
 
-    for tweet in api.mentions_timeline(since_id=latest_fav):
+    for tweet in api.mentions_timeline(since_id=latest_fav, tweet_mode='extended'):
         if not tweet.favorited:
-            print(f'Processing tweet: {tweet.text}')
-            tweet.text
+            print(f'Processing tweet: {tweet.full_text}')
             process_dividend_bot_request(api, tweet)
             api.create_favorite(tweet.id)
 
@@ -98,4 +97,4 @@ if __name__ == '__main__':
     api = tweepy.API(auth, wait_on_rate_limit=True)
 
     reply_to_tweets(api)
-    react_to_tickers(api)
+    # react_to_tickers(api)
