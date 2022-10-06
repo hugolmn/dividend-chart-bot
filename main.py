@@ -14,10 +14,14 @@ def process_dividend_bot_request(api, tweet):
         chart = generate_dividend_chart(ticker, period)
         chart.save('chart.png')
 
-        api.update_status_with_media(
+        media = api.media_upload('chart.png')
+
+        api.update_status(
             status=f"Here is your chart @{tweet.author.screen_name}! Ticker: {ticker}. Period: {period}.",
-            filename='chart.png',
-            in_reply_to_status_id=tweet.id
+            # filename='chart.png',
+            media_ids=[media.media_id],
+            in_reply_to_status_id=tweet.id,
+            auto_populate_reply_metadata=True
         )
     except Exception as e: 
         print(e)
