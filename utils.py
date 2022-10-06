@@ -44,8 +44,9 @@ def process_dividend_history(history):
         .Dividends
         .rolling(5, center=True)
         .median()
-    ).bfill().ffill()
-
+    )
+    # ).bfill().ffill()
+    dividends['SmoothedDividends'] = dividends.SmoothedDividends.combine_first(dividends.Dividends)
     # dividends['YearlyDividends'] = dividends.SmoothedDividends * dividends.AnnualDividendCount
 
     dividends['YearlyDividends']= np.where(
@@ -78,7 +79,11 @@ def generate_dividend_chart(ticker, period):
         right=dividends.drop(columns=['Dividends']),
         on='Date',
         how='left'
-    ).ffill()
+    ).ffill(limit=300).fillna(0)
+
+    # Keep data from first dividend
+    index_first_dividend = df[df.YearlyDividends > 0].index[0]
+    df = df.loc[index_first_dividend:]
 
     # Drop where dividends is null
     df = df[df.YearlyDividends.notna()]
@@ -113,7 +118,7 @@ def generate_dividend_chart(ticker, period):
             color=alt.Color(
                 f"color:N",
                 title=f"""{ticker} {period} Yield Percentile. Current Yield: {
-                    df.iloc[-1].DividendYield:.1%} (Top {
+                    df.iloc[-1].DividendYield:.2%} (Top {
                     1 - df.DividendYield.rank(pct=True).iloc[-1]:.0%})""",
                 scale=scale,
                 legend=alt.Legend(
