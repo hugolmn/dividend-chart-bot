@@ -6,7 +6,21 @@ import seaborn as sns
 import datetime
 alt.data_transformers.disable_max_rows()
 
-def load_ticker_data(ticker, period):
+def load_ticker_data(ticker: str, period: str) -> pd.DataFrame:
+    """
+    Returns stock history from a ticker and a period.
+
+    Parameters:
+    ----------
+    - ticker: str
+        Ticker from yahoo finance
+    - period: str
+        Period to collect data from (ytd, 1wk, 1m, 6m, 1y, 10y, ..., max)
+
+    Returns:
+    -------
+    - pd.DataFrame containing stock historical data
+    """
     return yf.Ticker(ticker).history(
         period=period,
         auto_adjust=False
@@ -103,13 +117,17 @@ def generate_dividend_chart(ticker, period):
     # Create layers for chart
     def make_layer(yield_df, col1, col2):
         return alt.Chart(yield_df.assign(color=col1)).mark_area().encode(
-            x=alt.X('Date:T', title='', axis=alt.Axis(format='%Y')),
+            x=alt.X(
+                'Date:T',
+                title='',
+                axis=alt.Axis(format='%Y', tickCount='year')
+            ),
         ).encode(
             y=alt.Y(
                 f"{col1}:Q",
                 title='Stock Price',
                 axis=alt.Axis(format='$.0f'),
-                scale=alt.Scale(zero=False)
+                scale=alt.Scale(zero=False),
             ),
             y2=alt.Y2(
                 f"{col2}:Q",
