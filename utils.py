@@ -137,14 +137,15 @@ def generate_dividend_chart(ticker, period):
             ),
             color=alt.Color(
                 f"color:N",
-                title=f"""{ticker} {period} Yield Percentile. Price: ${
-                    df.iloc[-1].Close:.2f}. Yield: {
-                    df.iloc[-1].DividendYield:.2%} (Top {
-                    1 - df.DividendYield.rank(pct=True).iloc[-1]:.0%})""",
+                title='Yield percentile',
                 scale=scale,
                 legend=alt.Legend(
-                    orient='top',
-                    titleFontSize=30,
+                    legendX=5,
+                    legendY=5,
+                    orient='none',
+                    direction='horizontal',
+                    fillColor='white',
+                    titleFontSize=25,
                     labelFontSize=20,
                     titleLimit=0
                 )
@@ -160,7 +161,7 @@ def generate_dividend_chart(ticker, period):
         x=alt.X(
             'Date:T',
             title='',
-            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False)
+            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False, tickCount='year')
         ),
         y='Close:Q'
     )
@@ -170,7 +171,7 @@ def generate_dividend_chart(ticker, period):
         x=alt.X(
             'Date:T',
             title='',
-            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False)
+            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False, tickCount='year')
         ),
         y=alt.Y(
             'DividendYield:Q',
@@ -191,23 +192,28 @@ def generate_dividend_chart(ticker, period):
             scale=alt.Scale(zero=False)
         )
     )
-    # last_price = alt.Chart(df.iloc[-1].to_frame().T).mark_point().encode(
-    #     x='Date',
-    #     y='Close',
-    # )
-    # layers.append(last_price)
-    
-    # text = last_price.mark_text(
-    #     dy=50,
-    #     baseline='middle',
-    #     align='right'
-    # ).encode(
-    #     text=alt.Text('Close:Q', format='$.0f')
-    # )
-    # layers.append(text)
+
+    percentile = int((1 - df.DividendYield.rank(pct=True).iloc[-1]) * 100)
+    def format_percentile(percentile):
+        if (4 <= percentile <= 20) or (percentile % 10 not in [1, 2, 3]):
+            return str(percentile) + 'th'
+        if percentile % 10 == 1:
+            return str(percentile) + 'st'
+        if percentile % 10 == 2:
+            return str(percentile) + 'nd'
+        if percentile % 10 == 3:
+            return str(percentile) + 'rd'
+            
+    percentile_string = format_percentile(percentile)
+
     price_chart = alt.layer(*layers).properties(
         width=1200,
-        height=400
+        height=400,
+        title=f"""{ticker} {period} Chart • Price: ${
+                    df.iloc[-1].Close:.2f} • Yield: {
+                    df.iloc[-1].DividendYield:.2%} ({
+                    percentile_string} percentile) • Drawdown: {
+                        df.Drawdown.iloc[-1]:.0%}""",
     )
     yield_chart = yield_chart.properties(
         width=1200,
@@ -218,10 +224,19 @@ def generate_dividend_chart(ticker, period):
         height=150
     )
 
-    chart = alt.vconcat(price_chart, yield_chart, drawdown_chart)
+    chart = alt.vconcat(
+        price_chart,
+        yield_chart,
+        drawdown_chart,
+        spacing=0
+    )
     chart = chart.configure(
         background='white',
         font='Lato'
+    ).configure_title(
+        fontSize=30,
+        # labelFontSize=20,
+        # titleLimit=0
     ).configure_axisX(
         labelAngle=-35,
         labelFontSize=25
