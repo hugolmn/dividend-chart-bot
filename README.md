@@ -1,6 +1,6 @@
 # Dividend Chart Bot
 
-I have built a [streamlit app](https://hugolmn-finance-tools-finance-tools-qw1pw5.streamlitapp.com/Dividends) with pretty nice looking charts. I wanted to create a Twitter bot that can generate and post them on-demand.
+I have built a [streamlit app](https://finance.streamlitapp.com/Dividends) with pretty nice looking charts. I wanted to create a Twitter bot that can generate and post them on-demand.
 
 ## Architecture
 - Container:
