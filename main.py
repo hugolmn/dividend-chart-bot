@@ -1,23 +1,26 @@
+import datetime
+import random
+import yfinance as yf
 import tweepy
 import altair as alt
 import os
-import itertools
 from utils import generate_dividend_chart
 
 alt.data_transformers.disable_max_rows()
 
-def process_dividend_bot_request(api, tweet):
+def dividend_chart_reply_request(api, tweet):
     params = tweet.full_text.split('@DividendChart')[-1].strip().split()
     try:
         assert len(params) == 2, 'Wrong number of parameters.'
         ticker, period = params
+        ticker = ticker.split('$')[-1]
         chart = generate_dividend_chart(ticker, period)
         chart.save('chart.png')
 
         media = api.media_upload('chart.png')
 
         api.update_status(
-            status=f"Here is your chart @{tweet.author.screen_name}! Ticker: {ticker}. Period: {period}.",
+            status=f"Here is your chart @{tweet.author.screen_name}! Ticker: ${ticker}. Period: {period}.",
             # filename='chart.png',
             media_ids=[media.media_id],
             in_reply_to_status_id=tweet.id,
@@ -25,10 +28,6 @@ def process_dividend_bot_request(api, tweet):
         )
     except Exception as e: 
         print(e)
-        # api.update_status(
-        #     status=f"Sorry @{tweet.author.screen_name}, there is something wrong with your query. Please try again!",
-        #     in_reply_to_status_id=tweet.id,
-        # )
 
 def reply_to_tweets(api):
     latest_fav = api.get_favorites()[0].id
@@ -36,60 +35,87 @@ def reply_to_tweets(api):
     for tweet in api.mentions_timeline(since_id=latest_fav, tweet_mode='extended'):
         if not tweet.favorited:
             print(f'Processing tweet: {tweet.full_text}')
-            process_dividend_bot_request(api, tweet)
+            dividend_chart_reply_request(api, tweet)
             api.create_favorite(tweet.id)
 
-def react_to_tickers(api):
-    tickers = [
-        'SPG',
-        'O',
-        'WPC',
-        'ARE',
-        'DLR',
-        'NNN',
-        'IIPR',
-        'PLD',
-        'ADC',
-        'VICI',
-        'BAM',
-        'MPW',
-        'FRT'
-    ]
-    accounts_to_follow = [
-        'HighDividends',
-        'Dividend_Dollar',
-        'rbradthomas',
-        'CalebGregory304'
-    ]
 
-    period = '20y'
-    for ticker, author in itertools.product(tickers, accounts_to_follow):
-        # Collect recent tweets
-        tweets = api.search_tweets(
-            f'${ticker} from:{author}',
-            result_type='recent',
-            count=10,
-            tweet_mode='extended',
-            lang='en'
+def dividend_chart_reply_author(api, tweet, ticker, period):
+    # Generate chart
+    chart = generate_dividend_chart(ticker, period)
+    # Save it
+    chart.save('chart.png')
+    # Upload chart
+    media = api.media_upload('chart.png')
+    # Tweet it
+    api.update_status(
+        status=f"Ticker: ${ticker}. Period: {period}.",
+        media_ids=[media.media_id],
+        in_reply_to_status_id=tweet.id,
+        auto_populate_reply_metadata=True
+    )
+
+def get_tweets_from_list(api):
+    # Get tweets from list timeline
+    tweets = api.list_timeline(
+        list_id="1585331746828173340",
+        count=200,
+        include_rts=False
+    )
+    # Get previously posted tweets
+    previous_tweets = api.user_timeline(count=30)
+    # Get list of user ids replied to in the past 30 tweets
+    previous_tweets_user_ids = {t.in_reply_to_user_id for t in previous_tweets}
+
+    # Filter tweets and shuffle
+    tweets = [
+        t 
+        for t in tweets 
+        if (
+            t.author.id not in previous_tweets_user_ids
+            and t.entities['symbols']
+            and not t.favorited
         )
-        # Iterate over each tweet
-        for tweet in tweets:
-            # Ignore if already favorited
-            if not tweet.favorited and (tweet.author.followers_count < 1000) and (len(tweet.entities['symbols']) == 1):
-                # Generate chart
-                chart = generate_dividend_chart(ticker, period)
-                # Save it
-                chart.save('chart.png')
-                # Tweet it
-                # api.update_status_with_media(
-                #     status=f"@{tweet.author.screen_name}\nTicker: {ticker}. Period: {period}.",
-                #     filename='chart.png',
-                #     in_reply_to_status_id=tweet.id
-                # )
-                print(f'Replying to tweet: {tweet.full_text}')
-                # Fav tweet replied to
-                # api.create_favorite(tweet.id)
+    ]
+    random.shuffle(tweets)
+    return tweets
 
+def react_to_authors(api):
+    period = '10y'
+    tweets = get_tweets_from_list(api)
+
+    for tweet in tweets:
+        try:
+            tweet.favorite()
+        except:
+            continue
+        
+        # Get list of tickers in tweet
+        tickers = [s['text'] for s in tweet.entities['symbols']]
+        print('Tickers for tweet:')
+        print(tweet.text)
+        print(f'{tickers}')
+        # Iterate over randomly over tickers
+        while len(tickers):
+            # Fetch historical data
+            ticker = random.choice(tickers)
+            print(f'Getting data for {ticker}')
+            past_year = yf.Ticker(ticker).history('1y', interval='3mo', auto_adjust=False)
+            
+            # If ticker has distributed dividends in the past year, exit loop and generate chart
+            if len(past_year[past_year.Dividends > 0]) > 0:
+                try:
+                    print(f'Attempting to make chart for ticker: {ticker}')
+                    dividend_chart_reply_author(api, tweet, ticker, period)
+                    print('Succeded!')
+                    break
+                except:
+                    pass
+            # Else remove it from the ticker list
+            tickers.remove(ticker)
+
+        # If a ticker distributing dividends has been found
+        if len(tickers):
+            break
 
 if __name__ == '__main__':
     auth = tweepy.OAuth1UserHandler(
@@ -101,4 +127,4 @@ if __name__ == '__main__':
     api = tweepy.API(auth, wait_on_rate_limit=True)
 
     reply_to_tweets(api)
-    # react_to_tickers(api)
+    react_to_authors(api)
