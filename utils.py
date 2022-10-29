@@ -129,11 +129,11 @@ def generate_dividend_chart(ticker, period):
                 f"{col1}:Q",
                 title='Stock Price',
                 axis=alt.Axis(format='$.0f'),
-                scale=alt.Scale(zero=False, domain=[0, df.Close.max()*1.2], clamp=True),
+                scale=alt.Scale(zero=False, domain=[df.Close.min()*0.9, df.Close.max()*1.15], clamp=True),
             ),
             y2=alt.Y2(
                 f"{col2}:Q",
-                title='Stock Price'
+                title='Stock Price',
             ),
             color=alt.Color(
                 f"color:N",
@@ -162,9 +162,9 @@ def generate_dividend_chart(ticker, period):
         x=alt.X(
             'Date:T',
             title='',
-            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False, tickCount='year')
+            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False, tickCount='year'),
         ),
-        y='Close:Q'
+        y=alt.Y('Close:Q', scale=alt.Scale(zero=False))
     )
     layers.append(price)
 
