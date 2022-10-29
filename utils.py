@@ -129,7 +129,7 @@ def generate_dividend_chart(ticker, period):
                 f"{col1}:Q",
                 title='Stock Price',
                 axis=alt.Axis(format='$.0f'),
-                scale=alt.Scale(zero=False),
+                scale=alt.Scale(zero=False, domain=[0, df.Close.max()*1.2], clamp=True),
             ),
             y2=alt.Y2(
                 f"{col2}:Q",
@@ -140,8 +140,9 @@ def generate_dividend_chart(ticker, period):
                 title='Yield percentile',
                 scale=scale,
                 legend=alt.Legend(
-                    legendX=5,
-                    legendY=5,
+                    legendX=1,
+                    legendY=0,
+                    padding=5,
                     orient='none',
                     direction='horizontal',
                     fillColor='white',
