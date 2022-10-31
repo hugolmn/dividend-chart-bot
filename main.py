@@ -1,3 +1,4 @@
+import datetime
 import random
 import yfinance as yf
 import tweepy
@@ -140,10 +141,7 @@ def react_to_authors(api):
         if reacted:
             break
 
-    if not reacted:
-        dividend_chart_achievers(api, period)
    
-
 if __name__ == '__main__':
     auth = tweepy.OAuth1UserHandler(
         consumer_key=os.environ['api_key'],
@@ -154,4 +152,10 @@ if __name__ == '__main__':
     api = tweepy.API(auth, wait_on_rate_limit=True)
 
     reply_to_tweets(api)
-    react_to_authors(api)
+
+    # React to authors between in the second half of each hours
+    if datetime.datetime.now().minute >= 30:
+        react_to_authors(api)
+    # Publish for a dividend achiever in the first half
+    else:
+        dividend_chart_achievers(api, '10y')
