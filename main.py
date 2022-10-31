@@ -81,7 +81,9 @@ def get_tweets_from_list(api):
         include_rts=False
     )
     # Get previously posted tweets
-    previous_tweets = api.user_timeline(count=30)
+    previous_tweets = api.user_timeline(
+        count=int(api.get_list(list_id='1585331746828173340').member_count / 2)
+    )
     # Get list of user ids replied to in the past 30 tweets
     previous_tweets_user_ids = {t.in_reply_to_user_id for t in previous_tweets}
 
