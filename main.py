@@ -1,9 +1,9 @@
-import datetime
 import random
 import yfinance as yf
 import tweepy
 import altair as alt
 import os
+import pandas as pd
 from utils import generate_dividend_chart
 
 alt.data_transformers.disable_max_rows()
@@ -54,6 +54,25 @@ def dividend_chart_reply_author(api, tweet, ticker, period):
         auto_populate_reply_metadata=True
     )
 
+def dividend_chart_achievers(api, period):
+    # https://www.invesco.com/us/financial-products/etfs/holdings?audienceType=Investor&ticker=PFM
+    # Get random stock
+    stock = pd.read_csv(os.path.join('data', 'dividend_achievers.csv')).sample(1)
+    ticker = stock['Holding Ticker'].str.strip().iloc[0]
+    name = stock['Name'].str.strip().iloc[0]
+
+    # Generate chart
+    chart = generate_dividend_chart(ticker, period)
+    # Save it
+    chart.save('chart.png')
+    # Upload chart
+    media = api.media_upload('chart.png')
+    # Tweet it
+    api.update_status(
+        status=f"Dividend Aristocrats and Achievers: {name}.\nTicker: ${ticker}. Period: {period}.",
+        media_ids=[media.media_id],
+    )
+
 def get_tweets_from_list(api):
     # Get tweets from list timeline
     tweets = api.list_timeline(
@@ -80,6 +99,7 @@ def get_tweets_from_list(api):
     return tweets
 
 def react_to_authors(api):
+    reacted = False
     period = '10y'
     tweets = get_tweets_from_list(api)
 
@@ -107,6 +127,7 @@ def react_to_authors(api):
                     print(f'Attempting to make chart for ticker: {ticker}')
                     dividend_chart_reply_author(api, tweet, ticker, period)
                     print('Succeded!')
+                    reacted = True
                     break
                 except:
                     pass
@@ -114,8 +135,12 @@ def react_to_authors(api):
             tickers.remove(ticker)
 
         # If a ticker distributing dividends has been found
-        if len(tickers):
+        if reacted:
             break
+
+    if not reacted:
+        dividend_chart_achievers(api, period)
+   
 
 if __name__ == '__main__':
     auth = tweepy.OAuth1UserHandler(
