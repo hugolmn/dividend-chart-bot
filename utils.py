@@ -140,15 +140,15 @@ def generate_dividend_chart(ticker, period):
                 title='Yield percentile',
                 scale=scale,
                 legend=alt.Legend(
-                    legendX=1,
-                    legendY=0,
+                    legendX=0,
+                    legendY=-30,
                     padding=5,
                     orient='none',
                     direction='horizontal',
-                    fillColor='white',
-                    titleFontSize=25,
+                    titleFontSize=22,
                     labelFontSize=20,
-                    titleLimit=0
+                    titleLimit=0,
+                    titleOrient='left'
                 )
             ),
             opacity=alt.value(0.8)
@@ -236,8 +236,7 @@ def generate_dividend_chart(ticker, period):
         font='Lato'
     ).configure_title(
         fontSize=30,
-        # labelFontSize=20,
-        # titleLimit=0
+        dy=-15
     ).configure_axisX(
         labelAngle=-35,
         labelFontSize=25
