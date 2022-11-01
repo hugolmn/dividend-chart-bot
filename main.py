@@ -68,9 +68,20 @@ def dividend_chart_achievers(api, period):
     chart.save('chart.png')
     # Upload chart
     media = api.media_upload('chart.png')
+    # Get stock info
+    info = yf.Ticker(ticker).info
+    stock_details = [
+        'Dividend Aristocrats and Achievers',
+        f"Name: {name}",
+        f"Ticker: ${ticker}. Period: {period}.",
+        f"Sector: {info['sector']}",
+        f"MarketCap: ${info['marketCap']/1e9:.1f}B",
+        f"P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
+    ]
     # Tweet it
     api.update_status(
-        status=f"Dividend Aristocrats and Achievers: {name}.\nTicker: ${ticker}. Period: {period}.",
+        # status=f"Dividend Aristocrats and Achievers\nName: {name}.\nTicker: ${ticker}. Period: {period}.\nMarket cap: ${info['marketCap']/1e9:.1f}B",
+        status='\n'.join(stock_details),
         media_ids=[media.media_id],
     )
 
@@ -152,10 +163,7 @@ if __name__ == '__main__':
     api = tweepy.API(auth, wait_on_rate_limit=True)
 
     reply_to_tweets(api)
+    react_to_authors(api)
 
-    # React to authors between in the second half of each hours
-    if datetime.datetime.now().minute >= 30:
-        react_to_authors(api)
-    # Publish for a dividend achiever in the first half
-    else:
-        dividend_chart_achievers(api, '10y')
+    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 2 == 0):
+            dividend_chart_achievers(api, '15y')
