@@ -4,6 +4,135 @@ import numpy as np
 import altair as alt
 import seaborn as sns
 import datetime
+
+def streamlit_theme():
+    font = "Lato"
+    primary_color = "#FAFAFA"
+    font_color = "#FAFAFA"
+    grey_color = "#49494a"
+    base_size = 16
+    lg_font = base_size * 1.25
+    sm_font = base_size * 0.8
+    xl_font = base_size * 2
+
+    config = {
+        "config": {
+            "padding": 20,
+            "background": "#0e1117",
+        #     "arc": {"fill": primary_color},
+        #     "area": {"fill": primary_color},
+        #     "circle": {"fill": primary_color, "stroke": font_color, "strokeWidth": 0.5},
+            # "line": {"stroke": "primary_color"},
+        #     "path": {"stroke": primary_color},
+        #     "point": {"stroke": primary_color},
+        #     "rect": {"fill": primary_color},
+        #     "shape": {"stroke": primary_color},
+        #     "symbol": {"fill": primary_color},
+            "title": {
+                "font": font,
+                "fontSize": xl_font,
+                "color": font_color,
+            },
+            "axis": {
+                "titleFont": font,
+                "titleColor": font_color,
+                "titleFontSize": lg_font,
+                "labelFont": font,
+                "labelColor": grey_color,
+                "labelFontSize": sm_font,
+                "gridColor": grey_color,
+                "domainColor": grey_color,
+                "tickColor": grey_color,
+            },
+            "axisX": {
+                "labelAngle": -90,
+            },
+            "axisY": {
+                "orient": "right",
+                "titleX": -1200,
+                "titleY": -5,
+                "titleAngle": 0,
+                "titleAlign": "left",
+            },
+            "header": {
+                "labelFont": font,
+                "titleFont": font,
+                "labelFontSize": base_size,
+                "titleFontSize": base_size,
+            },
+            "legend": {
+                "titleFont": font,
+                "titleColor": grey_color,
+                "titleFontSize": base_size,
+                "titleOrient": "left",
+                "labelFont": font,
+                "labelColor": grey_color,
+                "labelFontSize": base_size,
+            },
+            "view": {
+                "strokeWidth": 0
+            },
+            "text": {
+                "color": font_color,
+                "align": "left",
+                "baseline": "middle",
+                "fontWeight": "bold",
+                "fontSize": lg_font,
+                "dx": 7
+            }
+            # "range": {
+            #     "category": ["#f63366", "#fffd80", "#0068c9", "#ff2b2b", "#09ab3b"],
+            #     "diverging": [
+            #         "#850018",
+            #         "#cd1549",
+            #         "#f6618d",
+            #         "#fbafc4",
+            #         "#f5f5f5",
+            #         "#93c5fe",
+            #         "#5091e6",
+            #         "#1d5ebd",
+            #         "#002f84",
+            #     ],
+            #     "heatmap": [
+            #         "#ffb5d4",
+            #         "#ff97b8",
+            #         "#ff7499",
+            #         "#fc4c78",
+            #         "#ec245f",
+            #         "#d2004b",
+            #         "#b10034",
+            #         "#91001f",
+            #         "#720008",
+            #     ],
+            #     "ramp": [
+            #         "#ffb5d4",
+            #         "#ff97b8",
+            #         "#ff7499",
+            #         "#fc4c78",
+            #         "#ec245f",
+            #         "#d2004b",
+            #         "#b10034",
+            #         "#91001f",
+            #         "#720008",
+            #     ],
+            #     "ordinal": [
+            #         "#ffb5d4",
+            #         "#ff97b8",
+            #         "#ff7499",
+            #         "#fc4c78",
+            #         "#ec245f",
+            #         "#d2004b",
+            #         "#b10034",
+            #         "#91001f",
+            #         "#720008",
+            #     ],
+            # },
+        }
+    }
+    return config
+
+alt.themes.register("test", streamlit_theme)
+alt.themes.enable("test")
 alt.data_transformers.disable_max_rows()
 
 def load_ticker_data(ticker: str, period: str) -> pd.DataFrame:
@@ -116,6 +245,13 @@ def generate_dividend_chart(ticker, period):
     palette = sns.color_palette("vlag_r", len(quantiles)-1).as_hex()
     scale = alt.Scale(domain=yield_df.columns[1:-1].tolist(), range=palette)
 
+
+    upside_downside = df.DividendYield.iloc[-1] / df.DividendYield.quantile(q=0.5)
+    if upside_downside > 1: 
+        upside_downside_str = f'{upside_downside - 1: .0%} upside to median yield (~${upside_downside * df.Close.iloc[-1]:.0f}).'
+    else:
+        upside_downside_str = f'{upside_downside - 1: .0%} downside to median yield.'
+
     # Create layers for chart
     def make_layer(yield_df, col1, col2):
         return alt.Chart(yield_df.assign(color=col1)).mark_area().encode(
@@ -127,71 +263,94 @@ def generate_dividend_chart(ticker, period):
         ).encode(
             y=alt.Y(
                 f"{col1}:Q",
-                title='Stock Price',
+                title=f'Stock Price: {upside_downside_str}',
                 axis=alt.Axis(format='$.0f'),
                 scale=alt.Scale(zero=False, domain=[df.Close.min()*0.9, df.Close.max()*1.15], clamp=True),
             ),
             y2=alt.Y2(
                 f"{col2}:Q",
-                title='Stock Price',
             ),
             color=alt.Color(
                 f"color:N",
                 title='Yield percentile',
                 scale=scale,
                 legend=alt.Legend(
-                    legendX=0,
-                    legendY=-30,
-                    padding=5,
+                    legendX=465,
+                    legendY=-25,
                     orient='none',
                     direction='horizontal',
-                    titleFontSize=22,
-                    labelFontSize=20,
-                    titleLimit=0,
-                    titleOrient='left'
                 )
             ),
-            opacity=alt.value(0.8)
+            opacity=alt.value(0.75)
         )
 
     layers=[]
     for col1, col2 in zip(yield_df.columns[1:-1], yield_df.columns[2:]):
         layers.append(make_layer(yield_df, col1, col2))
 
-    price = alt.Chart(df).mark_line(color='black').encode(
+    price = alt.Chart(df).mark_line(color="white").encode(
+        x=alt.X(
+            'Date:T',
+            axis=alt.Axis(
+                format='%Y',
+                labels=False,
+                ticks=False,
+                domain=False,
+                tickCount='year'
+            ),
+        ),
+        y=alt.Y(
+            'Close:Q',
+            scale=alt.Scale(zero=False),
+        )
+    )
+    layers.append(price)
+
+    price_text = alt.Chart(df.tail(1)).mark_text().encode(
         x=alt.X(
             'Date:T',
             title='',
             axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False, tickCount='year'),
         ),
-        y=alt.Y('Close:Q', scale=alt.Scale(zero=False))
+        y=alt.Y('Close:Q', scale=alt.Scale(zero=False)),
+        text=alt.Text('Close:Q', format='$.0f')
     )
-    layers.append(price)
+    layers.append(price_text)
 
     yield_chart = price.encode(
-        x=alt.X(
-            'Date:T',
-            title='',
-            axis=alt.Axis(format='%Y', labels=False, ticks=False, domain=False, tickCount='year')
-        ),
         y=alt.Y(
             'DividendYield:Q',
-            axis=alt.Axis(format='.1%'),
-            scale=alt.Scale(zero=False)
+            axis=alt.Axis(format='.1%',),
+            scale=alt.Scale(zero=False),
+            title=f'Dividend Yield: higher than {df.DividendYield.rank(pct=True).iloc[-1]:.0%} of the period.'
         )
+    )
+    yield_text = price_text.encode(
+        y=alt.Y('DividendYield:Q', scale=alt.Scale(zero=False)),
+        text=alt.Text('DividendYield:Q', format='.1%')
     )
 
     drawdown_chart = price.encode(
         x=alt.X(
             'Date:T',
             title='',
-            axis=alt.Axis(format='%Y', tickCount='year')
+            axis=alt.Axis(
+                format='%Y',
+                labels=True,
+                tickCount='year'
+            ),
         ),
         y=alt.Y(
             'Drawdown:Q',
-            axis=alt.Axis(format='.0%'),
+            axis=alt.Axis(
+                format='.0%',
+            ),
             scale=alt.Scale(zero=False)
         )
+    )
+    drawdown_text = price_text.encode(
+        y=alt.Y('Drawdown:Q', scale=alt.Scale(zero=False)),
+        text=alt.Text('Drawdown:Q', format='.0%')
     )
 
     percentile = int((1 - df.DividendYield.rank(pct=True).iloc[-1]) * 100)
@@ -210,11 +369,11 @@ def generate_dividend_chart(ticker, period):
     price_chart = alt.layer(*layers).properties(
         width=1200,
         height=400,
-        title=f"""{ticker} {period} Chart • Price: ${
-                    df.iloc[-1].Close:.2f} • Yield: {
-                    df.iloc[-1].DividendYield:.2%} ({
-                    percentile_string} percentile) • Drawdown: {
-                        df.Drawdown.iloc[-1]:.0%}""",
+        # title=f"""{ticker} {period} Chart • Price: ${
+        #             df.iloc[-1].Close:.2f} • Yield: {
+        #             df.iloc[-1].DividendYield:.2%} ({
+        #             percentile_string} percentile) • Drawdown: {
+        #                 df.Drawdown.iloc[-1]:.0%}""",
     )
     yield_chart = yield_chart.properties(
         width=1200,
@@ -227,40 +386,15 @@ def generate_dividend_chart(ticker, period):
 
     chart = alt.vconcat(
         price_chart,
-        yield_chart,
-        drawdown_chart,
+        (yield_chart + yield_text),
+        (drawdown_chart + drawdown_text),
         spacing=0
     )
+    chart = chart.properties(
+        title=f"""Ticker: {ticker}  •  Period: {period}"""
+    )
     chart = chart.configure(
-        background='white',
         font='Lato'
-    ).configure_title(
-        fontSize=30,
-        dy=-15
-    ).configure_axisX(
-        labelAngle=-35,
-        labelFontSize=25
-    ).configure_axisY(
-        labelFontSize=25,
-        titleFontSize=20
     )
+    
     return chart
-
-    chart = alt.layer(
-        *layers
-    ).properties(
-        width=1200,
-        height=675
-    ).configure(
-        background='white',
-        font='Lato'
-    ).configure_axisY(
-        labelFontSize=25,
-        titleFontSize=20
-    ).configure_axisX(
-        labelAngle=-35,
-        labelFontSize=25
-    )
-
-
-    # return chart, df
