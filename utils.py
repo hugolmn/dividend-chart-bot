@@ -10,6 +10,7 @@ def streamlit_theme():
     primary_color = "#FAFAFA"
     font_color = "#FAFAFA"
     grey_color = "#49494a"
+    label_color = "#787878"
     base_size = 16
     lg_font = base_size * 1.25
     sm_font = base_size * 0.8
@@ -38,7 +39,7 @@ def streamlit_theme():
                 "titleColor": font_color,
                 "titleFontSize": lg_font,
                 "labelFont": font,
-                "labelColor": grey_color,
+                "labelColor": label_color,
                 "labelFontSize": sm_font,
                 "gridColor": grey_color,
                 "domainColor": grey_color,
@@ -46,6 +47,7 @@ def streamlit_theme():
             },
             "axisX": {
                 "labelAngle": -90,
+                # "labelOffset": 8
             },
             "axisY": {
                 "orient": "right",
@@ -62,11 +64,11 @@ def streamlit_theme():
             },
             "legend": {
                 "titleFont": font,
-                "titleColor": grey_color,
+                "titleColor": label_color,
                 "titleFontSize": base_size,
                 "titleOrient": "left",
                 "labelFont": font,
-                "labelColor": grey_color,
+                "labelColor": label_color,
                 "labelFontSize": base_size,
             },
             "view": {
@@ -263,7 +265,7 @@ def generate_dividend_chart(ticker, period):
         ).encode(
             y=alt.Y(
                 f"{col1}:Q",
-                title=f'Stock Price: {upside_downside_str}',
+                title=f'Stock price: {upside_downside_str}',
                 axis=alt.Axis(format='$.0f'),
                 scale=alt.Scale(zero=False, domain=[df.Close.min()*0.9, df.Close.max()*1.15], clamp=True),
             ),
@@ -322,9 +324,19 @@ def generate_dividend_chart(ticker, period):
             'DividendYield:Q',
             axis=alt.Axis(format='.1%',),
             scale=alt.Scale(zero=False),
-            title=f'Dividend Yield: higher than {df.DividendYield.rank(pct=True).iloc[-1]:.0%} of the period.'
+            title=f'Dividend yield: higher than {df.DividendYield.rank(pct=True).iloc[-1]:.0%} of the period (median {df.DividendYield.quantile(q=0.5):.2%}).'
         )
     )
+    median_yield = price.mark_rule(
+        color='white',
+        strokeDash=[16, 16],
+        strokeWidth=.5
+        # opacity=.5,
+    ).encode(
+        x=alt.X(),
+        y='median(DividendYield):Q'
+    )
+     
     yield_text = price_text.encode(
         y=alt.Y('DividendYield:Q', scale=alt.Scale(zero=False)),
         text=alt.Text('DividendYield:Q', format='.1%')
@@ -386,7 +398,7 @@ def generate_dividend_chart(ticker, period):
 
     chart = alt.vconcat(
         price_chart,
-        (yield_chart + yield_text),
+        (yield_chart + yield_text + median_yield),
         (drawdown_chart + drawdown_text),
         spacing=0
     )
