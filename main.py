@@ -94,23 +94,25 @@ def get_tweets_from_list(api):
     )
     # Get previously posted tweets
     previous_tweets = api.user_timeline(
-        count=int(api.get_list(list_id='1585331746828173340').member_count / 2)
+        # count=int(api.get_list(list_id='1585331746828173340').member_count / 2)
+        count=24,
     )
     # Get list of user ids replied to in the past 30 tweets
     previous_tweets_user_ids = {t.in_reply_to_user_id for t in previous_tweets}
 
-    # Filter tweets and shuffle
-    tweets = [
-        t 
-        for t in tweets 
-        if (
-            t.author.id not in previous_tweets_user_ids
-            and t.entities['symbols']
-            and not t.favorited
-        )
+    # Filter tweets
+    tweets_df = pd.json_normalize([t._json for t in tweets])
+    tweets_df['status'] = tweets
+
+    tweets_df = tweets_df[
+        ~tweets_df['user.id'].isin(previous_tweets_user_ids) # Not recently replied to
+        & ~tweets_df.favorited # No already favorited
+        & tweets_df.in_reply_to_status_id.isna() # Not a reply to another tweet
+        & tweets_df['entities.symbols'].apply(len) != 0 # At least one ticker mentioned
     ]
-    random.shuffle(tweets)
-    return tweets
+    tweets_df = tweets_df.sort_values(by='user.followers_count', ascending=False) # Sort by number of followers
+    filtered_tweets = tweets_df['status'].tolist()
+    return filtered_tweets
 
 def react_to_authors(api):
     reacted = False
