@@ -127,6 +127,7 @@ def react_to_authors(api):
         
         # Get list of tickers in tweet
         tickers = [s['text'] for s in tweet.entities['symbols']]
+        random.shuffle(tickers)
         print('Tickers for tweet:')
         print(tweet.text)
         print(f'{tickers}')
@@ -167,5 +168,6 @@ if __name__ == '__main__':
     reply_to_tweets(api)
     react_to_authors(api)
 
+    # Post dividend chart for a random dividend achiever every 2 hours
     if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 2 == 0):
             dividend_chart_achievers(api, '15y')
