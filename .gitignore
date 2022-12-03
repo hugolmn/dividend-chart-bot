@@ -2,3 +2,4 @@
 **/*.yaml
 **/*.png
 **/*.ipynb
+.env
