@@ -141,14 +141,14 @@ def generate_tweet_ticker_details(info):
     # Equity
     if info['quoteType'] == "EQUITY":
         details = [
-            f"{info['shortName']} (${info['symbol']}):",
+            f"{info['shortName']} ${info['symbol']} :",
             f"• Sector: {info['sector']}",
             f"• MarketCap: ${info['marketCap']/1e9:.1f}B",
             f"• P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
         ]
     # ETF
     elif info['quoteType'] == "ETF":
-        details = [f"{info['shortName']} (${info['symbol']}):"]
+        details = [f"{info['shortName']} ${info['symbol']} :"]
 
         if holdings := ['$' + holding['symbol'] for holding in info['holdings'][:5] if holding['symbol'] != '']:
             details += [f"• Top holdings: {' '.join(holdings)}"]
