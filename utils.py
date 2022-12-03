@@ -137,6 +137,36 @@ alt.themes.register("test", streamlit_theme)
 alt.themes.enable("test")
 alt.data_transformers.disable_max_rows()
 
+def generate_tweet_ticker_details(info):
+    # Equity
+    if info['quoteType'] == "EQUITY":
+        details = [
+            f"{info['shortName']} (${info['symbol']}):",
+            f"• Sector: {info['sector']}",
+            f"• MarketCap: ${info['marketCap']/1e9:.1f}B",
+            f"• P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
+        ]
+    # ETF
+    elif info['quoteType'] == "ETF":
+        details = [f"{info['shortName']} (${info['symbol']}):"]
+
+        if holdings := ['$' + holding['symbol'] for holding in info['holdings'][:5] if holding['symbol'] != '']:
+            details += [f"• Top holdings: {' '.join(holdings)}"]
+
+        if 'totalAssets' in info and info['totalAssets']:
+            details += [f"• AUM: ${info['totalAssets']/1e9:.2f}B"]
+
+        if equity_holdings := info['equityHoldings']:
+            if 'priceToEarnings' in equity_holdings and equity_holdings['priceToEarnings']:
+                details += [f"• P/E: {info['equityHoldings']['priceToEarnings']:.1f}"]
+    # Unknown
+    else:
+        details = [
+            f"Here is your chart!"
+        ]
+
+    return details
+
 def load_ticker_data(ticker: str, period: str) -> pd.DataFrame:
     """
     Returns stock history from a ticker and a period.

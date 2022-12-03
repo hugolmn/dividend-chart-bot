@@ -5,7 +5,7 @@ import tweepy
 import altair as alt
 import os
 import pandas as pd
-from utils import generate_dividend_chart
+from utils import generate_dividend_chart, generate_tweet_ticker_details
 
 alt.data_transformers.disable_max_rows()
 
@@ -22,30 +22,7 @@ def dividend_chart_reply_request(api, tweet):
 
         # Get stock info
         info = yf.Ticker(ticker).info
-        if info['quoteType'] == "EQUITY":
-            details = [
-                f"{info['shortName']} (${ticker}):",
-                f"• Sector: {info['sector']}",
-                f"• MarketCap: ${info['totalAssets']/1e9:.1f}B",
-                f"• P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
-            ]
-        elif info['quoteType'] == "ETF":
-            details = [f"{info['shortName']}:"]
-
-            if holdings := ['$' + holding['symbol'] for holding in info['holdings'][:5] if holding['symbol'] != '']:
-                details += [f"• Top holdings: {' '.join(holdings)}"]
-
-            if 'totalAssets' in info and info['totalAssets']:
-                details += [f"• AUM: ${info['totalAssets']/1e9:.2f}B"]
-
-            if equity_holdings := info['equityHoldings']:
-                if 'priceToEarnings' in equity_holdings and equity_holdings['priceToEarnings']:
-                    details += [f"• P/E: {info['equityHoldings']['priceToEarnings']:.1f}"]
-
-        else:
-            details = [
-                f"Here is your chart @{tweet.author.screen_name}!"
-            ]
+        details = generate_tweet_ticker_details(info)
 
         api.update_status(
             # status=f"Here is your chart @{tweet.author.screen_name}! Ticker: ${ticker}. Period: {period}.",
@@ -67,22 +44,6 @@ def reply_to_tweets(api):
             dividend_chart_reply_request(api, tweet)
             api.create_favorite(tweet.id)
 
-
-def dividend_chart_reply_author(api, tweet, ticker, period):
-    # Generate chart
-    chart = generate_dividend_chart(ticker, period)
-    # Save it
-    chart.save('chart.png')
-    # Upload chart
-    media = api.media_upload('chart.png')
-    # Tweet it
-    api.update_status(
-        status=f"Ticker: ${ticker}. Period: {period}.",
-        media_ids=[media.media_id],
-        in_reply_to_status_id=tweet.id,
-        auto_populate_reply_metadata=True
-    )
-
 def dividend_chart_achievers(api, period):
     # https://www.invesco.com/us/financial-products/etfs/holdings?audienceType=Investor&ticker=PFM
     # Get random stock
@@ -98,19 +59,31 @@ def dividend_chart_achievers(api, period):
     media = api.media_upload('chart.png')
     # Get stock info
     info = yf.Ticker(ticker).info
-    stock_details = [
-        'Dividend Aristocrats and Achievers',
-        f"Name: {name}",
-        f"Ticker: ${ticker}. Period: {period}.",
-        f"Sector: {info['sector']}",
-        f"MarketCap: ${info['marketCap']/1e9:.1f}B",
-        f"P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
-    ]
+    details = generate_tweet_ticker_details(info)
+    details = ['Dividend Aristocrats and Achievers'] + details
     # Tweet it
     api.update_status(
-        # status=f"Dividend Aristocrats and Achievers\nName: {name}.\nTicker: ${ticker}. Period: {period}.\nMarket cap: ${info['marketCap']/1e9:.1f}B",
-        status='\n'.join(stock_details),
+        status='\n'.join(details),
         media_ids=[media.media_id],
+    )
+
+def dividend_chart_reply_author(api, tweet, ticker, period):
+    # Generate chart
+    chart = generate_dividend_chart(ticker, period)
+    # Save it
+    chart.save('chart.png')
+    # Upload chart
+    media = api.media_upload('chart.png')
+    # Get ticker details
+    info = yf.Ticker(ticker).info
+    details = generate_tweet_ticker_details(info)
+    # Tweet it
+    api.update_status(
+        # status=f"Ticker: ${ticker}. Period: {period}.",
+        status='\n'.join(details),
+        media_ids=[media.media_id],
+        in_reply_to_status_id=tweet.id,
+        auto_populate_reply_metadata=True
     )
 
 def get_tweets_from_list(api):
