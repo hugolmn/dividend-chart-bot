@@ -114,32 +114,52 @@ def dividend_chart_achievers(api, period):
     )
 
 def get_tweets_from_list(api):
-    # Get tweets from list timeline
-    tweets = api.list_timeline(
+    list_timeline = api.list_timeline(
         list_id="1585331746828173340",
         count=200,
-        include_rts=False
+        include_rts=False, 
     )
+
+    # Init timeline dataframe
+    timeline = pd.json_normalize([t._json for t in list_timeline])
+    timeline['created_at'] = pd.to_datetime(timeline.created_at)
+    timeline['status'] = list_timeline
+
+    while timeline.created_at.min() > timeline.created_at.max() - pd.Timedelta('1D') and len(timeline) < 500:
+        # Get oldest tweet it in current timeline dataframe
+        oldest_tweet_id = timeline[timeline.created_at == timeline.created_at.min()].iloc[0].id
+        # Collect older tweets
+        list_timeline = api.list_timeline(
+            list_id="1585331746828173340",
+            count=200,
+            include_rts=False, 
+            max_id=oldest_tweet_id
+        )
+
+        # Create temporary dataframe with older data
+        _timeline = pd.json_normalize([t._json for t in list_timeline])
+        _timeline['created_at'] = pd.to_datetime(_timeline.created_at)
+        _timeline['status'] = list_timeline
+
+        # Merge dataframes:
+        timeline = pd.concat([timeline, _timeline])
+        timeline = timeline.drop_duplicates(subset=['id'])
+
     # Get previously posted tweets
     previous_tweets = api.user_timeline(
-        # count=int(api.get_list(list_id='1585331746828173340').member_count / 2)
-        count=24,
+        count=30,
     )
-    # Get list of user ids replied to in the past 30 tweets
+    # Get list of user ids replied to in the past 24 tweets
     previous_tweets_user_ids = {t.in_reply_to_user_id for t in previous_tweets}
 
-    # Filter tweets
-    tweets_df = pd.json_normalize([t._json for t in tweets])
-    tweets_df['status'] = tweets
-
-    tweets_df = tweets_df[
-        ~tweets_df['user.id'].isin(previous_tweets_user_ids) # Not recently replied to
-        & ~tweets_df.favorited # No already favorited
-        & tweets_df.in_reply_to_status_id.isna() # Not a reply to another tweet
-        & tweets_df['entities.symbols'].apply(len) != 0 # At least one ticker mentioned
+    timeline = timeline[
+        ~timeline['user.id'].isin(previous_tweets_user_ids) # Not recently replied to
+        & ~timeline.favorited # No already favorited
+        & timeline.in_reply_to_status_id.isna() # Not a reply to another tweet
+        & timeline['entities.symbols'].apply(len) != 0 # At least one ticker mentioned
     ]
-    tweets_df = tweets_df.sort_values(by='user.followers_count', ascending=False) # Sort by number of followers
-    filtered_tweets = tweets_df['status'].tolist()
+    timeline = timeline.sort_values(by='user.followers_count', ascending=False) # Sort by number of followers
+    filtered_tweets = timeline['status'].tolist()
     return filtered_tweets
 
 def react_to_authors(api):
