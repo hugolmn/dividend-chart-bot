@@ -203,7 +203,51 @@ def react_to_authors(api):
         if reacted:
             break
 
-   
+def publish_ranking(api):
+    # Get most recent 200 tweets
+    mentions_timeline = api.mentions_timeline(count=200)
+
+    # Init timeline dataframe
+    mentions = pd.json_normalize([t._json for t in mentions_timeline])
+    mentions['created_at'] = pd.to_datetime(mentions.created_at)
+
+    while mentions.created_at.min() > mentions.created_at.max() - pd.Timedelta('4W'):
+        # Get oldest tweet it in current mentions dataframe
+        oldest_tweet_id = mentions[mentions.created_at == mentions.created_at.min()].iloc[0].id
+        # Collect older tweets
+        mentions_timeline = api.mentions_timeline(count=200, max_id=oldest_tweet_id)
+
+        # Create temporary dataframe with older data
+        _mentions = pd.json_normalize([t._json for t in mentions_timeline])
+        _mentions['created_at'] = pd.to_datetime(_mentions.created_at)
+
+        # Merge dataframes:
+        mentions = pd.concat([mentions, _mentions])
+        mentions = mentions.drop_duplicates(subset=['id'])
+
+    # Keep past week
+    mentions = mentions[mentions.created_at >= mentions.created_at.max() - pd.Timedelta('4W')]
+
+    mentions = mentions.loc[~mentions['user.screen_name'].isin(['DividendChart', 'hugo_le_moine_']), ['text', 'user.screen_name']]
+    mentions['text'] = mentions.text.str.split('@DividendChart').str[-1].str.split()
+    mentions = mentions[mentions.text.str.len() == 2]
+    mentions = mentions.assign(ticker=mentions.text.str[0].str.strip('$').str.split('.').str[0].str.upper())
+    mentions = mentions.drop(columns=['text'])
+
+    ranking = mentions['user.screen_name'].value_counts().to_frame().reset_index()
+    ranking.columns = ['user', 'count']
+    ranking['rank'] = ranking['count'].rank(ascending=False, method='dense')
+    ranking = ranking[ranking['rank'] <= 3]
+
+    tweet_most_active_users = [
+        'Most active users in the past month:',
+        '\n'.join('@' + ranking.user),
+        'Thank you all! :)'
+    ]
+
+    api.update_status(status='\n'.join(tweet_most_active_users))
+
+
 if __name__ == '__main__':
     auth = tweepy.OAuth1UserHandler(
         consumer_key=os.environ['api_key'],
@@ -219,3 +263,7 @@ if __name__ == '__main__':
     # Post dividend chart for a random dividend achiever every 2 hours
     if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 2 == 0):
             dividend_chart_achievers(api, '15y')
+
+    # Post ranking every sunday at 6pm
+    if (datetime.datetime.now().weekday() == 6) and (datetime.datetime.now().hour == 18) and (datetime.datetime.now().minute < 30):
+        publish_ranking(api)
