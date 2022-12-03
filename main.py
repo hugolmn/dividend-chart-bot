@@ -20,8 +20,36 @@ def dividend_chart_reply_request(api, tweet):
 
         media = api.media_upload('chart.png')
 
+        # Get stock info
+        info = yf.Ticker(ticker).info
+        if info['quoteType'] == "EQUITY":
+            details = [
+                f"{info['shortName']} (${ticker}):",
+                f"• Sector: {info['sector']}",
+                f"• MarketCap: ${info['totalAssets']/1e9:.1f}B",
+                f"• P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
+            ]
+        elif info['quoteType'] == "ETF":
+            details = [f"{info['shortName']}:"]
+
+            if holdings := ['$' + holding['symbol'] for holding in info['holdings'][:5] if holding['symbol'] != '']:
+                details += [f"• Top holdings: {' '.join(holdings)}"]
+
+            if 'totalAssets' in info and info['totalAssets']:
+                details += [f"• AUM: ${info['totalAssets']/1e9:.2f}B"]
+
+            if equity_holdings := info['equityHoldings']:
+                if 'priceToEarnings' in equity_holdings and equity_holdings['priceToEarnings']:
+                    details += [f"• P/E: {info['equityHoldings']['priceToEarnings']:.1f}"]
+
+        else:
+            details = [
+                f"Here is your chart @{tweet.author.screen_name}!"
+            ]
+
         api.update_status(
-            status=f"Here is your chart @{tweet.author.screen_name}! Ticker: ${ticker}. Period: {period}.",
+            # status=f"Here is your chart @{tweet.author.screen_name}! Ticker: ${ticker}. Period: {period}.",
+            status='\n'.join(details),
             # filename='chart.png',
             media_ids=[media.media_id],
             in_reply_to_status_id=tweet.id,
