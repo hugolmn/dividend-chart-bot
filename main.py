@@ -231,10 +231,10 @@ if __name__ == '__main__':
     api = tweepy.API(auth, wait_on_rate_limit=True)
 
     reply_to_tweets(api)
-    react_to_authors(api)
+    # react_to_authors(api)
 
     # Post dividend chart for a random dividend achiever every 2 hours
-    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 2 == 0):
+    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 1 == 0):
             dividend_chart_achievers(api, '15y')
 
     # Post ranking every sunday at 6pm

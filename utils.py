@@ -162,7 +162,7 @@ def generate_tweet_ticker_details(info):
     # Unknown
     else:
         details = [
-            f"Here is your chart!"
+            f"Chart for ${info['symbol']}!"
         ]
 
     return details
@@ -240,7 +240,7 @@ def process_dividend_history(history):
     return dividends
 
 def generate_dividend_chart(ticker, period):
-        # Load historical data
+    # Load historical data
     history = load_ticker_data(
         ticker=ticker,
         period=f"{int(period.split('y')[0]) + 1}y" if 'y' in period else period
@@ -433,7 +433,7 @@ def generate_dividend_chart(ticker, period):
         spacing=0
     )
     chart = chart.properties(
-        title=f"""Ticker: {ticker}  •  Period: {period}"""
+        title=f"""Ticker: {ticker}  •  Period: {df.Date.dt.year.max() - df.Date.dt.year.min() + 1}y"""
     )
     chart = chart.configure(
         font='Lato'
