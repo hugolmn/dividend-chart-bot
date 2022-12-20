@@ -12,8 +12,12 @@ alt.data_transformers.disable_max_rows()
 def dividend_chart_reply_request(api, tweet):
     params = tweet.full_text.split('@DividendChart')[-1].strip().split()
     try:
-        assert len(params) == 2, 'Wrong number of parameters.'
-        ticker, period = params
+        if len(params) != 2:
+            ticker = params[0]
+            period = '15y'
+        else:
+            ticker, period = params
+        # assert len(params) == 2, 'Wrong number of parameters.'
         ticker = ticker.split('$')[-1]
         chart = generate_dividend_chart(ticker, period)
         chart.save('chart.png')
@@ -234,8 +238,8 @@ if __name__ == '__main__':
     # react_to_authors(api)
 
     # Post dividend chart for a random dividend achiever every 2 hours
-    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 3 in [9, 12, 15, 18, 21]):
-            dividend_chart_achievers(api, '15y')
+    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in [9, 12, 15, 18, 21]):
+        dividend_chart_achievers(api, '15y')
 
     # Post ranking every sunday at 6pm
     if (datetime.datetime.now().weekday() == 6) and (datetime.datetime.now().hour == 18) and (datetime.datetime.now().minute < 30):
