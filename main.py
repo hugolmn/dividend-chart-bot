@@ -45,11 +45,9 @@ def reply_to_tweets(api):
             api.create_favorite(tweet.id)
 
 def dividend_chart_achievers(api, period):
-    # https://www.invesco.com/us/financial-products/etfs/holdings?audienceType=Investor&ticker=PFM
     # Get random stock
-    stock = pd.read_csv(os.path.join('data', 'dividend_achievers.csv')).sample(1)
-    ticker = stock['Holding Ticker'].str.strip().iloc[0]
-    name = stock['Name'].str.strip().iloc[0]
+    stock = pd.read_csv(os.path.join('data', 'ticker_list.csv')).sample(1)
+    ticker = stock['Ticker'].str.strip().iloc[0]
 
     # Generate chart
     chart = generate_dividend_chart(ticker, period)
@@ -60,7 +58,7 @@ def dividend_chart_achievers(api, period):
     # Get stock info
     info = yf.Ticker(ticker).info
     details = generate_tweet_ticker_details(info)
-    details = ['Dividend Aristocrats and Achievers'] + details
+    # details = ['Dividend Aristocrats and Achievers'] + details
     # Tweet it
     api.update_status(
         status='\n'.join(details),
@@ -210,7 +208,9 @@ def publish_ranking(api):
     ranking = mentions['user.screen_name'].value_counts().to_frame().reset_index()
     ranking.columns = ['user', 'count']
     ranking['rank'] = ranking['count'].rank(ascending=False, method='dense')
-    ranking = ranking[ranking['rank'] <= 3]
+    # ranking['cum_len'] = ranking['user'].str.len().add(1).cumsum()
+    ranking = ranking.iloc[:10]
+    # ranking = ranking[ranking.cum_len <= (200)]
 
     tweet_most_active_users = [
         'Most active users in the past month:',
@@ -234,7 +234,7 @@ if __name__ == '__main__':
     # react_to_authors(api)
 
     # Post dividend chart for a random dividend achiever every 2 hours
-    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 1 == 0):
+    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour % 3 in [9, 12, 15, 18, 21]):
             dividend_chart_achievers(api, '15y')
 
     # Post ranking every sunday at 6pm
