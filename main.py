@@ -12,12 +12,12 @@ alt.data_transformers.disable_max_rows()
 def dividend_chart_reply_request(api, tweet):
     params = tweet.full_text.split('@DividendChart')[-1].strip().split()
     try:
-        if len(params) != 2:
-            ticker = params[0]
-            period = '15y'
-        else:
-            ticker, period = params
-        # assert len(params) == 2, 'Wrong number of parameters.'
+        assert len(params) == 2, 'Wrong number of parameters.'
+        # if len(params) != 2:
+        #     ticker = params[0]
+        #     period = '15y'
+        # else:
+        ticker, period = params
         ticker = ticker.split('$')[-1]
         chart = generate_dividend_chart(ticker, period)
         chart.save('chart.png')
