@@ -26,7 +26,10 @@ def dividend_chart_reply_request(api, tweet):
 
         # Get stock info
         info = yf.Ticker(ticker).info
-        details = generate_tweet_ticker_details(info)
+        try:
+            details = generate_tweet_ticker_details(info)
+        except:
+            details = [ticker]
 
         api.update_status(
             # status=f"Here is your chart @{tweet.author.screen_name}! Ticker: ${ticker}. Period: {period}.",
@@ -78,7 +81,10 @@ def dividend_chart_reply_author(api, tweet, ticker, period):
     media = api.media_upload('chart.png')
     # Get ticker details
     info = yf.Ticker(ticker).info
-    details = generate_tweet_ticker_details(info)
+    try:
+        details = generate_tweet_ticker_details(info)
+    except:
+        details = [ticker]
     # Tweet it
     api.update_status(
         # status=f"Ticker: ${ticker}. Period: {period}.",
