@@ -29,6 +29,8 @@ def dividend_chart_reply_request(api, tweet):
         try:
             details = generate_tweet_ticker_details(info)
         except:
+            if ticker[0] != '$':
+                ticker = '$' + ticker
             details = [ticker]
 
         api.update_status(
@@ -64,7 +66,12 @@ def dividend_chart_achievers(api, period):
     media = api.media_upload('chart.png')
     # Get stock info
     info = yf.Ticker(ticker).info
-    details = generate_tweet_ticker_details(info)
+    try:
+        details = generate_tweet_ticker_details(info)
+    except:
+        if ticker[0] != '$':
+            ticker = '$' + ticker
+        details = [ticker]
     # details = ['Dividend Aristocrats and Achievers'] + details
     # Tweet it
     api.update_status(
@@ -84,6 +91,8 @@ def dividend_chart_reply_author(api, tweet, ticker, period):
     try:
         details = generate_tweet_ticker_details(info)
     except:
+        if ticker[0] != '$':
+            ticker = '$' + ticker
         details = [ticker]
     # Tweet it
     api.update_status(
@@ -128,7 +137,7 @@ def get_tweets_from_list(api):
 
     # Get previously posted tweets
     previous_tweets = api.user_timeline(
-        count=30,
+        count=60,
     )
     # Get list of user ids replied to in the past 24 tweets
     previous_tweets_user_ids = {t.in_reply_to_user_id for t in previous_tweets}
@@ -145,7 +154,7 @@ def get_tweets_from_list(api):
 
 def react_to_authors(api):
     reacted = False
-    period = '10y'
+    period = '15y'
     tweets = get_tweets_from_list(api)
 
     for tweet in tweets:
@@ -241,11 +250,13 @@ if __name__ == '__main__':
     api = tweepy.API(auth, wait_on_rate_limit=True)
 
     reply_to_tweets(api)
-    # react_to_authors(api)
-
+    
     # Post dividend chart for a random dividend achiever every 2 hours
-    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in [9, 12, 15, 18, 21]):
+    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in range(9, 23, 2)):
         dividend_chart_achievers(api, '15y')
+
+    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in range(9, 22)):
+        react_to_authors(api)
 
     # Post ranking every sunday at 6pm
     if (datetime.datetime.now().weekday() == 6) and (datetime.datetime.now().hour == 18) and (datetime.datetime.now().minute < 30):

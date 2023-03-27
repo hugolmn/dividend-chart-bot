@@ -243,7 +243,7 @@ def generate_dividend_chart(ticker, period):
     # Load historical data
     history = load_ticker_data(
         ticker=ticker,
-        period=f"{int(period.split('y')[0]) + 1}y" if 'y' in period else period
+        period=f"{int(period.split('y')[0])}y" if 'y' in period else period
     )
 
     dividends = process_dividend_history(history)
