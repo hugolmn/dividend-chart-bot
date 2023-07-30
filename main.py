@@ -9,7 +9,24 @@ from utils import generate_dividend_chart, generate_tweet_ticker_details
 
 alt.data_transformers.disable_max_rows()
 
-def dividend_chart_reply_request(api, tweet):
+def dividend_chart_reply_request(api: tweepy.API, tweet: tweepy.models.Status):
+    """
+    Reply to a bot request: 
+    - extract the ticker and period
+    - generate dividend chart
+    - create a response tweet with generated chart
+    
+    Parameters:
+    ----------
+    api: tweepy.API
+        API object to publish tweets
+    tweet: tweepy.models.Status
+        Tweet to be replied to
+
+    Note:
+    ------
+    Requires update to API v2.
+    """
     params = tweet.full_text.split('@DividendChart')[-1].strip().split()
     try:
         assert len(params) == 2, 'Wrong number of parameters.'
@@ -44,16 +61,49 @@ def dividend_chart_reply_request(api, tweet):
     except Exception as e: 
         print(e)
 
-def reply_to_tweets(api):
+def reply_to_tweets(api: tweepy.API):
+    """
+    Check mentions since most recent fav and generate dividend charts.
+    Mentions are "fav" to indicated that they have already been processed.
+
+    Parameters:
+    ----------
+    api: tweepy.API
+        API object to publish tweets
+
+    Note:
+    ------
+    Requires update to API v2.
+    """
+    # Get id of the most recent favorited tweet
     latest_fav = api.get_favorites()[0].id
 
+    # Iterate over recent mentions
     for tweet in api.mentions_timeline(since_id=latest_fav, tweet_mode='extended'):
         if not tweet.favorited:
             print(f'Processing tweet: {tweet.full_text}')
+            # Generate dividend chart
             dividend_chart_reply_request(api, tweet)
+            # Fav tweet to indicate that processing is done
             api.create_favorite(tweet.id)
 
-def dividend_chart_achievers(api, period):
+def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str):
+    """
+    Select a random ticker and publish dividend chart on twitter. 
+    
+    Parameters:
+    ----------
+    api_v1: tweepy.API
+        API object to upload media
+    api_v2: tweepy.Client
+        API client to publish tweets
+    period: str
+        Time period for generated charts
+
+    Note:
+    ------
+    Already updated for API v2.
+    """
     # Get random stock
     stock = pd.read_csv(os.path.join('data', 'ticker_list.csv')).sample(1)
     ticker = stock['Ticker'].str.strip().iloc[0]
@@ -63,7 +113,7 @@ def dividend_chart_achievers(api, period):
     # Save it
     chart.save('chart.png')
     # Upload chart
-    media = api.media_upload('chart.png')
+    media = api_v1.media_upload('chart.png')
     # Get stock info
     info = yf.Ticker(ticker).info
     try:
@@ -74,12 +124,30 @@ def dividend_chart_achievers(api, period):
         details = [ticker]
     # details = ['Dividend Aristocrats and Achievers'] + details
     # Tweet it
-    api.update_status(
-        status='\n'.join(details),
+    api_v2.create_tweet(
+        text='\n'.join(details),
         media_ids=[media.media_id],
     )
 
-def dividend_chart_reply_author(api, tweet, ticker, period):
+def dividend_chart_reply_author(api: tweepy.API, tweet: tweepy.models.Status, ticker: str, period: str):
+    """
+    Generate a chart and publish it as a response to someone else's tweet.
+
+    Parameters:
+    ----------
+    api: tweepy.API
+        API object to publish tweets
+    tweet: tweepy.models.Status
+        Tweet to react to
+    ticker: str
+        Ticker to generate chart for
+    period: str
+        Time period for generated chart
+
+    Note:
+    ------
+    Requires update to API v2.
+    """
     # Generate chart
     chart = generate_dividend_chart(ticker, period)
     # Save it
@@ -103,7 +171,25 @@ def dividend_chart_reply_author(api, tweet, ticker, period):
         auto_populate_reply_metadata=True
     )
 
-def get_tweets_from_list(api):
+def get_tweets_from_list(api: tweepy.Client) -> list:
+    """
+    Collect recent tweets from a specific twitter list, for the past 24h.
+    Filter out authors recently replied to (past 60 posts), replies to other tweets.
+    Sort output by follower count.
+
+    Parameters:
+    ----------
+    api: tweepy.API
+        API object to publish tweets
+   
+    Returns:
+    -------
+    list of tweets.
+
+    Note:
+    ------
+    Requires update to API v2.
+    """
     list_timeline = api.list_timeline(
         list_id="1585331746828173340",
         count=200,
@@ -152,12 +238,26 @@ def get_tweets_from_list(api):
     filtered_tweets = timeline['status'].tolist()
     return filtered_tweets
 
-def react_to_authors(api):
+def react_to_authors(api: tweepy.API):
+    """
+    Create a tweet as a response to a random tweet for a specific twitter list.
+    Tweet replied to has to mention tickers of dividend stocks.
+
+    Parameters:
+    ----------
+    api: tweepy.API
+        API object to publish tweets
+
+    Note:
+    ------
+    Requires update to API v2.
+    """
     reacted = False
     period = '15y'
     tweets = get_tweets_from_list(api)
 
     for tweet in tweets:
+        # Fails if already favorited
         try:
             tweet.favorite()
         except:
@@ -247,17 +347,24 @@ if __name__ == '__main__':
         access_token=os.environ['access_token'],
         access_token_secret=os.environ['access_token_secret']
     )
-    api = tweepy.API(auth, wait_on_rate_limit=True)
+    api_v1 = tweepy.API(auth, wait_on_rate_limit=True)
 
-    reply_to_tweets(api)
+    api_v2 = tweepy.Client(
+        consumer_key=os.environ['api_key'],
+        consumer_secret=os.environ['api_secret'],
+        access_token=os.environ['access_token'],
+        access_token_secret=os.environ['access_token_secret']
+    )
+
+    # reply_to_tweets(api)
     
     # Post dividend chart for a random dividend achiever every 2 hours
-    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in range(9, 23, 2)):
-        dividend_chart_achievers(api, '15y')
+    # if (datetime.datetime.now().hour in range(6, 23, 1)):
+    random_dividend_chart(api_v1, api_v2, '20y')
 
-    if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in range(9, 22)):
-        react_to_authors(api)
+    # if (datetime.datetime.now().minute < 30) and (datetime.datetime.now().hour in range(9, 22)):
+        # react_to_authors(api)
 
     # Post ranking every sunday at 6pm
-    if (datetime.datetime.now().weekday() == 6) and (datetime.datetime.now().hour == 18) and (datetime.datetime.now().minute < 30):
-        publish_ranking(api)
+    # if (datetime.datetime.now().weekday() == 6) and (datetime.datetime.now().hour == 18) and (datetime.datetime.now().minute < 30):
+        # publish_ranking(api)
