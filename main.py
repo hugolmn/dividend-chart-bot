@@ -293,7 +293,20 @@ def react_to_authors(api: tweepy.API):
         if reacted:
             break
 
-def publish_ranking(api):
+def publish_ranking(api: tweepy.API):
+    """
+    Generate and publish a ranking of most active users of the @DividendChart bot.
+    Counts mentions from the past 4 weeks
+    
+    Parameters:
+    ----------
+    api: tweepy.API
+        API object to publish tweets
+   
+    Note:
+    ------
+    Requires update to API v2.
+    """
     # Get most recent 200 tweets
     mentions_timeline = api.mentions_timeline(count=200)
 
@@ -315,7 +328,7 @@ def publish_ranking(api):
         mentions = pd.concat([mentions, _mentions])
         mentions = mentions.drop_duplicates(subset=['id'])
 
-    # Keep past week
+    # Keep past 4 weeks
     mentions = mentions[mentions.created_at >= mentions.created_at.max() - pd.Timedelta('4W')]
 
     mentions = mentions.loc[~mentions['user.screen_name'].isin(['DividendChart', 'hugo_le_moine_']), ['text', 'user.screen_name']]
