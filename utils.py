@@ -143,8 +143,9 @@ def generate_tweet_ticker_details(info):
         details = [
             f"{info['shortName']} ${info['symbol']} :",
             f"• Sector: {info['sector']}",
+            f"• Industry: {info['industry']}",
             f"• MarketCap: ${info['marketCap']/1e9:.1f}B",
-            f"• P/E trailing/fwd: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
+            f"• P/E TTM/FWD: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
         ]
     # ETF
     elif info['quoteType'] == "ETF":
