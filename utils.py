@@ -140,24 +140,36 @@ alt.data_transformers.disable_max_rows()
 def generate_tweet_ticker_details(info):
     # Equity
     if info['quoteType'] == "EQUITY":
-        details = [
-            f"{info['shortName']} ${info['symbol']} :",
-            f"• Sector: {info['sector']}",
-            f"• Industry: {info['industry']}",
-            f"• MarketCap: ${info['marketCap']/1e9:.1f}B",
-            f"• P/E TTM/FWD: {info['trailingPE']:.1f}/{info['forwardPE']:.1f}"
-        ]
+        details = [f"{info['shortName']} ${info['symbol']} :"]
+        
+        if sector := info.get('sector'):
+            details += [f"• Sector: {sector}"]
+        
+        if industry := info.get('industry'):
+            details += [f"• Industry: {industry}"]
+        
+        if market_cap := info.get('marketCap'):
+            details += [f"• MarketCap: {market_cap/1e9:.1f}B"]
+        
+        if trailing_pe := info.get('trailingPE'):
+            if forward_pe := info.get('forwardPE'):
+                details += [f"• P/E TTM/FWD: {trailing_pe:.1f}/{forward_pe:.1f}"]
+            else:
+                details += [f"• P/E TTM: {trailing_pe:.1f}"]
+        
     # ETF
     elif info['quoteType'] == "ETF":
         details = [f"{info['shortName']} ${info['symbol']} :"]
 
-        if holdings := ['$' + holding['symbol'] for holding in info['holdings'][:5] if holding['symbol'] != '']:
+        if 'holdings' in info:
+            holdings = ['$' + holding['symbol'] for holding in info['holdings'][:5] if holding['symbol'] != '']
             details += [f"• Top holdings: {' '.join(holdings)}"]
 
         if 'totalAssets' in info and info['totalAssets']:
             details += [f"• AUM: ${info['totalAssets']/1e9:.2f}B"]
 
-        if equity_holdings := info['equityHoldings']:
+        if 'equityHoldings' in info:
+            equity_holdings = info['equityHoldings']
             if 'priceToEarnings' in equity_holdings and equity_holdings['priceToEarnings']:
                 details += [f"• P/E: {info['equityHoldings']['priceToEarnings']:.1f}"]
     # Unknown
