@@ -3,3 +3,4 @@
 **/*.png
 **/*.ipynb
 .env
+*.json
