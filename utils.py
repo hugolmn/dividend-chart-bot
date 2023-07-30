@@ -137,7 +137,7 @@ alt.themes.register("test", streamlit_theme)
 alt.themes.enable("test")
 alt.data_transformers.disable_max_rows()
 
-def generate_tweet_ticker_details(info):
+def generate_tweet_ticker_details(info, currency_symbol='$'):
     # Equity
     if info['quoteType'] == "EQUITY":
         details = [f"{info['shortName']} ${info['symbol']} :"]
@@ -149,7 +149,7 @@ def generate_tweet_ticker_details(info):
             details += [f"• Industry: {industry}"]
         
         if market_cap := info.get('marketCap'):
-            details += [f"• MarketCap: {market_cap/1e9:.1f}B"]
+            details += [f"• MarketCap: {currency_symbol}{market_cap/1e9:.1f}B"]
         
         if trailing_pe := info.get('trailingPE'):
             if forward_pe := info.get('forwardPE'):
@@ -166,7 +166,7 @@ def generate_tweet_ticker_details(info):
             details += [f"• Top holdings: {' '.join(holdings)}"]
 
         if 'totalAssets' in info and info['totalAssets']:
-            details += [f"• AUM: ${info['totalAssets']/1e9:.2f}B"]
+            details += [f"• AUM: {currency_symbol}{info['totalAssets']/1e9:.2f}B"]
 
         if 'equityHoldings' in info:
             equity_holdings = info['equityHoldings']
@@ -252,7 +252,7 @@ def process_dividend_history(history):
     
     return dividends
 
-def generate_dividend_chart(ticker, period):
+def generate_dividend_chart(ticker, period, currency_symbol='$'):
     # Load historical data
     history = load_ticker_data(
         ticker=ticker,
@@ -286,6 +286,20 @@ def generate_dividend_chart(ticker, period):
     yield_df.columns = [f"{decile * 10}%" for decile in yield_df.columns[::-1]]
     yield_df = yield_df.reset_index()
 
+    # Set locale options
+    if currency_symbol in ['€', 'CHF']:
+        alt.renderers.set_embed_options(
+            formatLocale={ 
+                'currency': ['', f'\u00a0{currency_symbol}']
+            }
+        )
+    else:
+        alt.renderers.set_embed_options(
+            formatLocale={
+                'currency': [f'\u00a0{currency_symbol}', '']
+            }
+        )
+
     # Create color palette and scale for legend
     palette = sns.color_palette("vlag_r", len(quantiles)-1).as_hex()
     scale = alt.Scale(domain=yield_df.columns[1:-1].tolist(), range=palette)
@@ -293,9 +307,9 @@ def generate_dividend_chart(ticker, period):
 
     upside_downside = df.DividendYield.iloc[-1] / df.DividendYield.quantile(q=0.5)
     if upside_downside > 1: 
-        upside_downside_str = f'{upside_downside - 1: .0%} upside to median yield (~${upside_downside * df.Close.iloc[-1]:.0f}).'
+        upside_downside_str = f'{upside_downside - 1: .0%} upside to median yield (~{currency_symbol}{upside_downside * df.Close.iloc[-1]:.0f}).'
     else:
-        upside_downside_str = f'{upside_downside - 1: .0%} downside to median yield.'
+        upside_downside_str = f'{upside_downside - 1: .0%} downside to median yield (~{currency_symbol}{upside_downside * df.Close.iloc[-1]:.0f}).'
 
     # Create layers for chart
     def make_layer(yield_df, col1, col2):
@@ -308,7 +322,7 @@ def generate_dividend_chart(ticker, period):
         ).encode(
             y=alt.Y(
                 f"{col1}:Q",
-                title=f'Stock price: {upside_downside_str}',
+                title=f'Price: {upside_downside_str}',
                 axis=alt.Axis(format='$.0f'),
                 scale=alt.Scale(zero=False, domain=[df.Close.min()*0.9, df.Close.max()*1.15], clamp=True),
             ),

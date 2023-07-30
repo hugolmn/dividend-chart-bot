@@ -116,8 +116,17 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
     media = api_v1.media_upload('chart.png')
     # Get stock info
     info = yf.Ticker(ticker).info
+
+    currency_symbol = '$'
+    if currency := info.get('currency'):
+        if currency in 'EUR':
+            currency_symbol = '€'
+        elif currency == 'GBP':
+            currency_symbol = '£'
+        elif currency == 'CHF':
+            currency_symbol = 'CHF'
     try:
-        details = generate_tweet_ticker_details(info)
+        details = generate_tweet_ticker_details(info, currency_symbol)
     except:
         if ticker[0] != '$':
             ticker = '$' + ticker
