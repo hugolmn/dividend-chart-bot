@@ -112,7 +112,8 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
         worksheet = sheet.worksheet('Stocks')
         tickers = pd.DataFrame(worksheet.get_all_records())
         stock = tickers.sample(1)
-    except:
+    except Exception as e:
+        print(e)
         print('Using ticker list')
         stock = pd.read_csv(os.path.join('data', 'ticker_list.csv')).sample(1)
 
