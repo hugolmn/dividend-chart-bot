@@ -5,6 +5,7 @@ import tweepy
 import altair as alt
 import os
 import pandas as pd
+import gspread
 from utils import generate_dividend_chart, generate_tweet_ticker_details
 
 alt.data_transformers.disable_max_rows()
@@ -105,7 +106,16 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
     Already updated for API v2.
     """
     # Get random stock
-    stock = pd.read_csv(os.path.join('data', 'ticker_list.csv')).sample(1)
+    try:
+        gc = gspread.service_account(filename='sheets-api-credentials.json')
+        sheet = gc.open_by_key('1WLR9XICmKZi0QHneZck8yWNVatwssSEv1Qs_oOCVGRg')
+        worksheet = sheet.worksheet('Stocks')
+        tickers = pd.DataFrame(worksheet.get_all_records())
+        stock = tickers.sample(1)
+    except:
+        print('Using ticker list')
+        stock = pd.read_csv(os.path.join('data', 'ticker_list.csv')).sample(1)
+
     ticker = stock['Ticker'].str.strip().iloc[0]
 
     # Generate chart
