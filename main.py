@@ -107,7 +107,7 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
     """
     # Get random stock
     try:
-        gc = gspread.service_account(filename='sheets-api-credentials.json')
+        gc = gspread.service_account(filename=os.path.join('data', 'sheets-api-credentials.json'))
         sheet = gc.open_by_key('1WLR9XICmKZi0QHneZck8yWNVatwssSEv1Qs_oOCVGRg')
         worksheet = sheet.worksheet('Stocks')
         tickers = pd.DataFrame(worksheet.get_all_records())
