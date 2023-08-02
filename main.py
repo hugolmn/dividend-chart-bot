@@ -130,7 +130,7 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
 
     currency_symbol = '$'
     if currency := info.get('currency'):
-        if currency in 'EUR':
+        if currency == 'EUR':
             currency_symbol = '€'
         elif currency == 'GBP':
             currency_symbol = '£'
