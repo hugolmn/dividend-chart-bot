@@ -119,12 +119,6 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
 
     ticker = stock['Ticker'].str.strip().iloc[0]
 
-    # Generate chart
-    chart = generate_dividend_chart(ticker, period)
-    # Save it
-    chart.save('chart.png')
-    # Upload chart
-    media = api_v1.media_upload('chart.png')
     # Get stock info
     info = yf.Ticker(ticker).info
 
@@ -142,7 +136,14 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
         if ticker[0] != '$':
             ticker = '$' + ticker
         details = [ticker]
-    # details = ['Dividend Aristocrats and Achievers'] + details
+
+    # Generate chart
+    chart = generate_dividend_chart(ticker, period, currency_symbol)
+    # Save it
+    chart.save('chart.png')
+    # Upload chart
+    media = api_v1.media_upload('chart.png')
+
     # Tweet it
     api_v2.create_tweet(
         text='\n'.join(details),
