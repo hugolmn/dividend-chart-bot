@@ -43,8 +43,8 @@ def dividend_chart_reply_request(api: tweepy.API, tweet: tweepy.models.Status):
         media = api.media_upload('chart.png')
 
         # Get stock info
-        info = yf.Ticker(ticker).info
         try:
+            info = yf.Ticker(ticker).info
             details = generate_tweet_ticker_details(info)
         except:
             if ticker[0] != '$':
@@ -107,7 +107,8 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
     """
     # Get random stock
     try:
-        gc = gspread.service_account(filename=os.path.join('data', 'sheets-api-credentials.json'))
+        gc = gspread.service_account(filename='sheets-api-credentials.json')
+        # gc = gspread.service_account_from_dict(os.environ('sheets-api-credentials'))
         sheet = gc.open_by_key('1WLR9XICmKZi0QHneZck8yWNVatwssSEv1Qs_oOCVGRg')
         worksheet = sheet.worksheet('Stocks')
         tickers = pd.DataFrame(worksheet.get_all_records())
@@ -119,24 +120,26 @@ def random_dividend_chart(api_v1: tweepy.API, api_v2: tweepy.Client, period: str
 
     ticker = stock['Ticker'].str.strip().iloc[0]
 
-    # Get stock info
-    info = yf.Ticker(ticker).info
-
     currency_symbol = '$'
-    if currency := info.get('currency'):
-        if currency == 'EUR':
-            currency_symbol = '€'
-        elif currency == 'GBP':
-            currency_symbol = '£'
-        elif currency == 'CHF':
-            currency_symbol = 'CHF'
+    # Get stock info
     try:
+        info = yf.Ticker(ticker).info
+        
+        if currency := info.get('currency'):
+            if currency == 'EUR':
+                currency_symbol = '€'
+            elif currency == 'GBP':
+                currency_symbol = '£'
+            elif currency == 'CHF':
+                currency_symbol = 'CHF'
         details = generate_tweet_ticker_details(info, currency_symbol)
     except:
-        if ticker[0] != '$':
-            ticker = '$' + ticker
-        details = [ticker]
-
+        details = [
+            '$' + ticker
+            if ticker[0] != '$'
+            else ticker
+        ]
+    
     # Generate chart
     chart = generate_dividend_chart(ticker, period, currency_symbol)
     # Save it
@@ -176,8 +179,8 @@ def dividend_chart_reply_author(api: tweepy.API, tweet: tweepy.models.Status, ti
     # Upload chart
     media = api.media_upload('chart.png')
     # Get ticker details
-    info = yf.Ticker(ticker).info
     try:
+        info = yf.Ticker(ticker).info
         details = generate_tweet_ticker_details(info)
     except:
         if ticker[0] != '$':

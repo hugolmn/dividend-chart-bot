@@ -137,7 +137,21 @@ alt.themes.register("test", streamlit_theme)
 alt.themes.enable("test")
 alt.data_transformers.disable_max_rows()
 
-def generate_tweet_ticker_details(info, currency_symbol='$'):
+def generate_tweet_ticker_details(info: dict, currency_symbol: str='$') -> list[str]:
+    """
+    Generate tweet text based on a ticker and currency symbol.
+
+    Parameters:
+    ----------
+    info: dict
+        Information about ticker from yf.Ticker
+    currency_symbol: str
+        Symbol for ticker currency
+
+    Returns:
+    -------
+    list of text parts of the tweet
+    """
     # Equity
     if info['quoteType'] == "EQUITY":
         details = [f"{info['shortName']} ${info['symbol']} :"]
@@ -200,7 +214,7 @@ def load_ticker_data(ticker: str, period: str) -> pd.DataFrame:
         auto_adjust=False
     )
 
-def process_dividend_history(history):
+def process_dividend_history(history: pd.DataFrame) -> pd.DataFrame:
     # Get df with dividend distributions
     dividends = history.loc[history.Dividends > 0, 'Dividends'].to_frame()
 
