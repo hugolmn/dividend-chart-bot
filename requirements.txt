@@ -1,7 +1,7 @@
 pandas==1.4.3
 numpy==1.23.1
 selenium==4.2.0
-yfinance==0.2.26
+yfinance==0.2.36
 altair==5.1.2
 vl-convert-python==0.14.0
 seaborn==0.12.0
