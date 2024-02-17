@@ -163,14 +163,20 @@ def generate_tweet_ticker_details(info: dict, currency_symbol: str='$') -> list[
             details += [f"• Industry: {industry}"]
         
         if market_cap := info.get('marketCap'):
-            details += [f"• MarketCap: {currency_symbol}{market_cap/1e9:.1f}B"]
+            details += [f"• Market Cap: {currency_symbol}{market_cap/1e9:.1f}B"]
         
-        if trailing_pe := info.get('trailingPE'):
+        if (trailing_pe := info.get('trailingPE')) and (sector := info.get('sector') != 'Real Estate') :
             if forward_pe := info.get('forwardPE'):
-                details += [f"• P/E TTM/FWD: {trailing_pe:.1f}/{forward_pe:.1f}"]
+                details += [f"• P/E (TTM) {trailing_pe:.1f}, P/E (FWD) {forward_pe:.1f}"]
             else:
-                details += [f"• P/E TTM: {trailing_pe:.1f}"]
-        
+                details += [f"• P/E (TTM): {trailing_pe:.1f}"]
+
+        if (ev_ebitda := info.get('enterpriseToEbitda')) and (pb_ratio := info.get('priceToBook')): 
+            details += [f"• EV/EBITDA: {ev_ebitda:.1f}, Price/Book: {pb_ratio:.1f}"]
+
+        if (dividend_rate := info.get('dividendRate')) and (dividend_yield := info.get('dividendYield')):
+            details += [f"• Forward Dividend & Yield: {dividend_rate:.1f} ({dividend_yield:.1%})"]
+
     # ETF
     elif info['quoteType'] == "ETF":
         details = [f"{info['shortName']} ${info['symbol']} :"]
